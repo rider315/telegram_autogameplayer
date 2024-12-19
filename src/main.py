@@ -1,4 +1,4 @@
-import cv2
+import os
 import time
 from image_detection import capture_screen, find_image_on_screen
 from click_handler import click_position
@@ -6,32 +6,41 @@ from logger import log_action
 
 # Main configuration
 THRESHOLD = 0.8
-TEMPLATE_PATH = "images/icon1.png"
+CLICK_DELAY = 0.1  # Minimum time between clicks per icon
+SCALE_RANGE = (0.5, 2.0)
+SCALE_STEP = 0.1
+IMAGE_FOLDER = "images"
 
 def main():
     print("Starting auto-clicker...")
-    last_click_time = 0
-    click_delay = 0.1  # Minimum time between clicks
+    last_click_times = {}
+
+    # Get all template paths
+    templates = [os.path.join(IMAGE_FOLDER, f) for f in os.listdir(IMAGE_FOLDER) if f.endswith(".png")]
 
     while True:
         try:
-            # Capture the entire screen
+            # Capture the screen
             screen = capture_screen()
 
-            # Find the template in the screen
-            try:
-                position = find_image_on_screen(screen, TEMPLATE_PATH, THRESHOLD)
+            # Iterate over each template
+            for template_path in templates:
+                try:
+                    position = find_image_on_screen(screen, template_path, THRESHOLD, SCALE_RANGE, SCALE_STEP)
 
-                if position and (time.time() - last_click_time) > click_delay:
-                    print(f"Template found at {position}. Clicking...")
-                    log_action("Template Found", f"Position: {position}")
-                    click_position(position)
-                    log_action("Click Performed", f"Position: {position}")
-                    last_click_time = time.time()
+                    if position:
+                        current_time = time.time()
+                        if (template_path not in last_click_times) or \
+                                (current_time - last_click_times[template_path] > CLICK_DELAY):
+                            print(f"Template {template_path} found at {position}. Clicking...")
+                            log_action("Template Found", f"Template: {template_path}, Position: {position}")
+                            click_position(position)
+                            log_action("Click Performed", f"Template: {template_path}, Position: {position}")
+                            last_click_times[template_path] = current_time
 
-            except FileNotFoundError as e:
-                print(e)
-                log_action("Error", str(e))
+                except FileNotFoundError as e:
+                    print(f"Error: {e}")
+                    log_action("Error", str(e))
 
         except Exception as e:
             print(f"Unexpected error: {e}")

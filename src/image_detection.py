@@ -33,7 +33,7 @@ def find_image_on_screen(screen, template_path, threshold=0.8, scale_range=(0.5,
         _, max_val, _, max_loc = cv2.minMaxLoc(result)
 
         if max_val >= best_match_val:
-            found = max_loc
+            found = (int(max_loc[0] + template_width / 2), int(max_loc[1] + template_height / 2))  # Center of the match
             best_match_val = max_val
 
     return found
